@@ -19,6 +19,7 @@ type Envelope interface {
 
 type Client interface {
 	SendAndReceive(e Envelope) ([]byte, error)
+	DoRawSendAndReceive([]byte) ([]byte, error)
 	GetServerAddr() string
 	GetUsername() string
 	DoRequest(e Envelope, oe operations.Element) error
@@ -71,6 +72,42 @@ func (c *client) SendAndReceive(e Envelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	req, err := http.NewRequest("POST", c.serverAddress, bytes.NewReader(bb))
+	if err != nil {
+		return nil, err
+	}
+	defer req.Body.Close()
+	c.logRequest(req)
+
+	req.SetBasicAuth(c.username, c.password)
+	req.Header.Set("Content-Type", "text/xml")
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	applyConfig(c.config, client)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	c.logResponse(resp)
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, NewError(resp)
+	}
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return respBytes, err
+}
+
+func (c *client) DoRawSendAndReceive(bb []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", c.serverAddress, bytes.NewReader(bb))
 	if err != nil {
 		return nil, err

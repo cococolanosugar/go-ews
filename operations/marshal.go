@@ -100,6 +100,31 @@ func reTagXMLElement(target interface{}) {
 		}
 		return
 	}
+
+	if targetType.Kind() == reflect.Slice {
+		length := targetValue.Len()
+		for i := 0; i < length; i++ {
+			fValue := targetValue.Index(i)
+
+			if !fValue.IsValid() {
+				continue
+			}
+
+			if !fValue.CanAddr() {
+				continue
+			}
+
+			if !fValue.Addr().CanInterface() {
+				continue
+			}
+			if elIface, ok := fValue.Interface().(Element); ok && !fValue.IsNil() {
+				elIface.SetForMarshal()
+				fValue.Set(reflect.ValueOf(elIface))
+			}
+			reTagXMLElement(fValue.Addr().Interface())
+		}
+	}
+
 }
 
 func (e *EnvelopeRequest) GetEnvelopeBytes() ([]byte, error) {

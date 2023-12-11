@@ -18,7 +18,8 @@ type CreateItem struct {
 }
 
 func (C *CreateItem) SetForMarshal() {
-	C.XMLName.Local = "m:CreateItem"
+	C.XMLName.Local = "CreateItem"
+	C.XMLName.Space = "http://schemas.microsoft.com/exchange/services/2006/messages"
 }
 
 func (C *CreateItem) GetSchema() *Schema {
